@@ -1,81 +1,38 @@
-# NetraPay (MVP)
+# NetraPay Backend
 
-**Eyes you trust. Payments you control.**
+Express API backed by Firebase Admin (Firestore + FCM).
 
-NetraPay is a voice-first UPI payment assistant for blind users, with **human-in-the-loop approval** by a trusted sighted guardian.
+## Setup
 
-This repo contains:
-- `mobile/`: Expo React Native app (Blind + Guardian roles)
-- `backend/`: Node.js + Express API (Firebase Admin + Firestore + FCM)
-
-## What’s implemented (MVP)
-
-- **Phone auth (OTP)** via Firebase Auth (client-side)
-- **Role selection** on first login (blind / guardian)
-- **Secure pairing**
-  - Blind user generates a **6-digit pairing code**
-  - Guardian enters code → backend permanently links both accounts
-- **Blind flow**
-  - Home auto-opens camera
-  - Continuous QR detection (UPI QR)
-  - Voice command parsing: “Pay 250” / “Pay 250 rupees”
-  - Captures a QR image
-  - Creates a **payment request** to paired guardian (expires in 2 minutes)
-  - Audio confirmations (TTS)
-- **Guardian flow**
-  - Receives FCM push notification for new request
-  - Views request (QR image + decoded UPI + amount)
-  - Approve → opens UPI app via deep link (GPay/PhonePe/etc.)
-  - Reject → updates status
-
-## Tech choices
-
-- **Mobile**: Expo (React Native), Firebase client SDK, `expo-camera`, `expo-speech`, `expo-notifications`
-- **Backend**: Express + Firebase Admin (Firestore + FCM)
-- **QR parsing**: parses UPI URI from QR payload, extracts `pa` / `pn`
-- **Speech-to-text (STT)**: MVP uses **device STT** via a dev-client compatible module (see `mobile/README_STT.md`)
-  - Expo doesn’t include robust always-on STT out of the box; we ship a production-viable path using a custom dev client.
-
-## Quick start
-
-### 1) Firebase project
-
-Create a Firebase project with:
-- Authentication: **Phone**
-- Firestore
-- Storage
-- Cloud Messaging (FCM)
-
-Download:
-- Android `google-services.json` → place at `mobile/google-services.json`
-- A service account JSON → place at `backend/serviceAccount.json` (DO NOT COMMIT)
-
-### 2) Backend
+1. Place a Firebase service account at `backend/serviceAccount.json`.
+2. Create `.env` from example:
 
 ```bash
-cd backend
-npm install
 cp .env.example .env
+```
+
+3. Install + run:
+
+```bash
+npm install
 npm run dev
 ```
 
-### 3) Mobile
+## Auth
 
-```bash
-cd mobile
-npm install
-cp .env.example .env
-npx expo start
-```
+All `/api/*` routes require:
 
-## Environment variables
+`Authorization: Bearer <Firebase ID token>`
 
-- Backend: `backend/.env.example`
-- Mobile: `mobile/.env.example`
+The mobile app obtains this ID token from Firebase Auth (Phone OTP).
 
-## Notes (important)
+## Routes (summary)
 
-- **NetraPay never moves money**. It only creates a verified request and deep-links into the user’s chosen UPI app.
-- **Requests expire after 2 minutes** and are single-use.
-- **Only the paired guardian** can approve a request.
+- `GET /api/health`
+- `POST /api/me` (role + fcmToken)
+- `POST /api/pairing/code` (blind only)
+- `POST /api/pairing/redeem` (guardian only)
+- `POST /api/requests` (blind only)
+- `GET /api/requests` (guardian only)
+- `PATCH /api/requests/:id` (guardian only; approve/reject)
 
